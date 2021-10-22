@@ -29,7 +29,8 @@ def verify_password(username, password):
         return False
 
 def count_tokens(username):
-    pass
+    tokens = users.find({"username": username})[0]["tokens"]
+    return tokens
 
 class Register(Resource):
     def post(self):
@@ -117,3 +118,49 @@ class Detect(Resource):
         })
 
         return jsonify(return_json)
+
+class Refill(Resource):
+    def post(self):
+        posted_data = request.get_json()
+
+        username = posted_data["username"]
+        password = posted_data["password"]
+
+        refill_amount = posted_data["refill"]
+
+        if not user_exists(username):
+            return_json = {
+                "status": 301,
+                "message": "Invalid Username or Password"
+            }
+            return jsonify(return_json)
+
+        correct_password = "iamanadmin"
+
+        if not correct_password:
+            return_json = {
+                "status" : 302,
+                "message" : "Invalid Username or Password"
+            }
+            return jsonify(return_json)
+
+        token_count = count_tokens(username)
+        users.update({
+            "username": username
+        },{"$set":{
+            "tokens": refill_amount + token_count
+        }})
+
+        return_json = {
+            "status" : 200,
+            "message" : "refill successful"
+        }
+
+        return jsonify(return_json)
+
+api.add_resource(Register, '/register')
+api.add_resource(Detect, '/detect')
+api.add_resource(Refill, '/refill')
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0")
