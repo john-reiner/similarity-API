@@ -7,7 +7,7 @@ import spacy
 app = Flask(__name__)
 api = Api(app)
 
-client = MongoClient("mongod://db:27017")
+client = MongoClient("mongodb://db:27017")
 db = client.SZimilarityDB
 users = db["Users"]
 
@@ -46,7 +46,7 @@ class Register(Resource):
             }
             return return_json
 
-        hashed_password = bcrypt.hashedpw(password.encode('utf8'), bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
 
         users.insert({
             "username": username,
@@ -158,9 +158,27 @@ class Refill(Resource):
 
         return jsonify(return_json)
 
+class CheckUserTokens(Resource):
+    def post(self):
+        posted_data = request.get_json()
+        if not verify_password(posted_data["username"], posted_data["password"]):
+            return_json = {
+                "status": 301,
+                "message": "Invalid Username or Password"
+            }
+            return jsonify(return_json)
+        else: 
+            return_json = {
+                "status": 200,
+                "message": posted_data["username"] + " has " + str(count_tokens(posted_data["username"])) + " tokens"
+            }
+            return jsonify(return_json)
+        
+
 api.add_resource(Register, '/register')
 api.add_resource(Detect, '/detect')
 api.add_resource(Refill, '/refill')
+api.add_resource(CheckUserTokens, '/tokens')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")
